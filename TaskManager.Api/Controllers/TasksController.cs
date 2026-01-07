@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using TaskManager.Api.Models;
 using TaskManager.Api.Services;
 using TaskManager.Api.DTOs;
+using TaskManager.Api.Services.TaskResults;
 
 namespace TaskManager.Api.Controllers
 {
@@ -25,60 +26,99 @@ namespace TaskManager.Api.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<TaskItem>> CreateTask([FromBody] CreateTaskDto taskDto)
+        public async Task<ActionResult<TaskDto>> CreateTask([FromBody] CreateTaskDto taskDto)
         {
-            var task = await _taskService.CreateTaskAsync(taskDto);
-            if (task == null) return BadRequest("Unable to create task");
+            var (result, task) = await _taskService.CreateTaskAsync(taskDto);
 
-            return CreatedAtAction(nameof(GetTaskByIdAsync), new { id = task.Id }, task);
+            return result switch
+            {
+                CreateTaskResult.Success => CreatedAtAction(nameof(GetTaskByIdAsync), 
+                    new { id = task.Id }, task),
+                CreateTaskResult.DuplicateTaskTitle => Conflict("A task with this title already exists"),
+                CreateTaskResult.ValidationFailed => BadRequest("Invalid task data"),
+                CreateTaskResult.DueDateInPast => BadRequest("Due date can not be in the past"),
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
+            };
         }
 
-        // Action for getting a task by ID
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetTaskByIdAsync(int id)
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TaskDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> GetTaskByIdAsync(int id)
         {
-            var task = await _taskService.GetTaskByIdAsync(id);
-            if (task == null)
+            try
             {
-                return NotFound();
-            }
+                var task = await _taskService.GetTaskByIdAsync(id);
 
-            return Ok(task);
+                if (task == null)
+                    return NotFound();
+
+                return Ok(task);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    $"An unexpected error occurred: {e.Message}");
+            }
         }
 
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<TaskItem>))]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<TaskItem>>> GetAllTasks()
         {
-            var tasks = await _taskService.GetAllTasksAsync();
-            return Ok(tasks);
+            try
+            {
+                var tasks = await _taskService.GetAllTasksAsync();
+
+                if (!tasks.Any())
+                    return NoContent(); //204
+
+                return Ok(tasks); //200
+            }
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    $"An unexpected error occurred: {e.Message}");
+            }
+
         }
 
         [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]   // Success
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]  // Invalid input
-        [ProducesResponseType(StatusCodes.Status404NotFound)]    // Task not found
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)] // Unexpected error
+        [ProducesResponseType(StatusCodes.Status204NoContent)] 
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> UpdateTask(int id, [FromBody] UpdateTaskDto taskDto)
         {
             var result = await _taskService.UpdateTaskAsync(id, taskDto);
-            if (!result) return NotFound();
 
-            return NoContent();
+            return result switch
+            {
+                UpdateTaskResult.Success => NoContent(),
+                UpdateTaskResult.NotFound => NotFound(),
+                UpdateTaskResult.ValidationFailed => BadRequest("Invalid task data"),
+                UpdateTaskResult.CompletedTask => BadRequest("Can not edit completed tasks"),
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
+            };
         }
 
         [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]   // Success
-        [ProducesResponseType(StatusCodes.Status404NotFound)]    // Task not found
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)] // Unexpected error
+        [ProducesResponseType(StatusCodes.Status204NoContent)] 
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> DeleteTask(int id)
         {
             var result = await _taskService.DeleteTaskAsync(id);
-            if (!result) return NotFound();
-
-            return NoContent();
             
+            return result switch
+            {
+                DeleteTaskResult.Success => NoContent(),
+                DeleteTaskResult.NotFound => NotFound(),
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
+            };
         }
 
     }

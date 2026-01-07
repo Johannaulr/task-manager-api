@@ -1,6 +1,7 @@
 using TaskManager.Api.Data;
 using TaskManager.Api.DTOs;
 using TaskManager.Api.Models;
+using TaskManager.Api.Services.TaskResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace TaskManager.Api.Services
@@ -13,44 +14,64 @@ namespace TaskManager.Api.Services
             _context = context;
         }
 
-        public async Task<TaskDto> CreateTaskAsync(CreateTaskDto taskDto)
+        // CREATE
+        public async Task<(CreateTaskResult Result, TaskDto? Created)> CreateTaskAsync(CreateTaskDto createTaskDto)
         {
+            // Business rule: duplicate title
+            bool exists = await _context.taskItems
+                .AnyAsync(t => t.Title == createTaskDto.Title);
+
+            if (exists)
+                return (CreateTaskResult.DuplicateTaskTitle, null);
+
+            if (string.IsNullOrWhiteSpace(createTaskDto.Title))
+                return (CreateTaskResult.ValidationFailed, null);
+            
+            if (createTaskDto.DueDate < DateTime.UtcNow)
+                return (CreateTaskResult.DueDateInPast, null);
+
             var task = new TaskItem
             {
-                Title = taskDto.Title,
-                Priority = (int)taskDto.Priority,
-                DueDate = taskDto.DueDate,
+                Title = createTaskDto.Title,
+                Priority = (int)createTaskDto.Priority,
+                DueDate = createTaskDto.DueDate,
             };
 
             _context.taskItems.Add(task);
 
             await _context.SaveChangesAsync();
             
-            var taskDtoResult = MapToDto(task);
-            return taskDtoResult;
+            var taskDto = MapToDto(task);
+            return (CreateTaskResult.Success, taskDto);
         }
 
+        // READ
         public async Task<TaskDto> GetTaskByIdAsync(int id)
         {
             var task = await _context.taskItems.FindAsync(id);
-            if (task == null) return null;
-
-            return MapToDto(task);
+            return task == null ? null : MapToDto(task);
         }
 
         public async Task<IEnumerable<TaskDto>> GetAllTasksAsync()
         {
             var tasks = await _context.taskItems.ToListAsync();
-
-            var taskDtos = tasks.Select(MapToDto).ToList();
-            
-            return taskDtos;
+            return tasks.Select(MapToDto);
         }
 
-        public async Task<bool> UpdateTaskAsync(int id, UpdateTaskDto taskDto)
+        // UPDATE
+        public async Task<UpdateTaskResult> UpdateTaskAsync(int id, UpdateTaskDto taskDto)
         {
             var task = await _context.taskItems.FindAsync(id);
-            if (task == null) return false;
+
+            if (task == null) 
+                return UpdateTaskResult.NotFound;
+
+            // Business rule: Completed task cannot be edited
+            if (task.IsCompleted) 
+                return UpdateTaskResult.CompletedTask;
+
+            if (string.IsNullOrWhiteSpace(taskDto.Title)) 
+                return UpdateTaskResult.ValidationFailed;
 
             task.Title = taskDto.Title;
             task.Priority = (int)taskDto.Priority;
@@ -58,20 +79,23 @@ namespace TaskManager.Api.Services
             task.IsCompleted = taskDto.IsCompleted;
 
             await _context.SaveChangesAsync();
-            return true;
+
+            return UpdateTaskResult.Success;
         }
 
-        public async Task<bool> DeleteTaskAsync(int id)
+        // DELETE
+        public async Task<DeleteTaskResult> DeleteTaskAsync(int id)
         {
             var task = await _context.taskItems.FindAsync(id);
-            if (task == null) return false;
+            if (task == null) return DeleteTaskResult.NotFound;
 
             _context.taskItems.Remove(task);
             await _context.SaveChangesAsync();
 
-            return true;
+            return DeleteTaskResult.Success;
         }
 
+        // MAPPER
         private TaskDto MapToDto(TaskItem task)
         {
             return new TaskDto
@@ -84,16 +108,4 @@ namespace TaskManager.Api.Services
             };
         }
     }
-    public class TaskNotFoundException : Exception
-    {
-        public TaskNotFoundException(int taskId)
-            : base($"Task with ID {taskId} not found.") { }
-    }
-
-    public class InvalidTaskDataException : Exception
-    {
-        public InvalidTaskDataException(string message)
-            : base(message) { }
-    }
-
 }

@@ -8,6 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
+builder.Services.AddMvc(options =>
+{
+   options.SuppressAsyncSuffixInActionNames = false;
+});
+
 builder.Services.AddScoped<ITaskService, TaskService>();
 
 builder.Services.AddDbContext<AppDbContext>(
