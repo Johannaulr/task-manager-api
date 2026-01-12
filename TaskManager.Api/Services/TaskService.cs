@@ -52,10 +52,26 @@ namespace TaskManager.Api.Services
             return task == null ? null : MapToDto(task);
         }
 
-        public async Task<IEnumerable<TaskDto>> GetAllTasksAsync()
+        public async Task<PagedResult<TaskDto>> GetAllTasksAsync(int pageNumber, int pageSize)
         {
-            var tasks = await _context.taskItems.ToListAsync();
-            return tasks.Select(MapToDto);
+
+            var query = _context.taskItems.AsQueryable();
+            var totalCount = await query.CountAsync();
+
+            var tasks = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var dtoTasks = tasks.Select(MapToDto).ToList();
+
+            return new PagedResult<TaskDto>
+            {
+                Tasks = dtoTasks,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
 
         // UPDATE

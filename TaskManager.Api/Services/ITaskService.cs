@@ -12,7 +12,7 @@ namespace TaskManager.Api.Services
     {
         Task<(CreateTaskResult Result, TaskDto? Created)> CreateTaskAsync(CreateTaskDto createTaskDto);
         Task<TaskDto> GetTaskByIdAsync(int id);
-        Task<IEnumerable<TaskDto>> GetAllTasksAsync();
+        Task<PagedResult<TaskDto>> GetAllTasksAsync(int pageNumber, int pageSize);
         Task<UpdateTaskResult> UpdateTaskAsync(int id, UpdateTaskDto taskDto);
         Task<DeleteTaskResult> DeleteTaskAsync(int id);
     }

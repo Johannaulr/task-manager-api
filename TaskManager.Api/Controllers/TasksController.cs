@@ -67,13 +67,21 @@ namespace TaskManager.Api.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<TaskItem>))]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<TaskItem>>> GetAllTasks()
+        public async Task<ActionResult<PagedResult<TaskItem>>> GetAllTasks(int pageNumber = 1, int pageSize = 10)
         {
             try
             {
-                var tasks = await _taskService.GetAllTasksAsync();
+                const int MaxPageSize = 100;
 
-                if (!tasks.Any())
+                if (pageNumber < 1)
+                    return BadRequest("Page Number must be at least 1");
+                
+                if (pageSize < 1 || pageSize > MaxPageSize)
+                    return BadRequest($"Page Size must be between 1 and {MaxPageSize}");
+
+                var tasks = await _taskService.GetAllTasksAsync(pageNumber, pageSize);
+                
+                if (tasks.TotalCount == 0)
                     return NoContent(); //204
 
                 return Ok(tasks); //200
