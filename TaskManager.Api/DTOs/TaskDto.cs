@@ -10,7 +10,7 @@ namespace TaskManager.Api.DTOs
     {
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
-        public bool IsCompleted { get; set; }
+        public TaskProgress Progress { get; set; }
         public TaskPriority Priority { get; set; }
         public DateTime? DueDate { get; set;}
     }

@@ -17,6 +17,6 @@ namespace TaskManager.Api.DTOs
         public TaskPriority Priority {get; set;}
 
         public DateTime? DueDate {get; set;}
-        public bool IsCompleted {get; set;}
+        public TaskProgress Progress {get; set;}
     }
 }

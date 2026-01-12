@@ -67,7 +67,7 @@ namespace TaskManager.Api.Services
                 return UpdateTaskResult.NotFound;
 
             // Business rule: Completed task cannot be edited
-            if (task.IsCompleted) 
+            if (task.Progress == 2) 
                 return UpdateTaskResult.CompletedTask;
 
             if (string.IsNullOrWhiteSpace(taskDto.Title)) 
@@ -76,7 +76,7 @@ namespace TaskManager.Api.Services
             task.Title = taskDto.Title;
             task.Priority = (int)taskDto.Priority;
             task.DueDate = taskDto.DueDate;
-            task.IsCompleted = taskDto.IsCompleted;
+            task.Progress = (int)taskDto.Progress;
 
             await _context.SaveChangesAsync();
 
@@ -104,7 +104,7 @@ namespace TaskManager.Api.Services
                 Title = task.Title,
                 Priority = (TaskPriority)task.Priority,
                 DueDate = task.DueDate,
-                IsCompleted = task.IsCompleted
+                Progress = (TaskProgress)task.Progress
             };
         }
     }
