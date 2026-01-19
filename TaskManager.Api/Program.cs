@@ -14,6 +14,7 @@ builder.Services.AddMvc(options =>
 });
 
 builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ITagService, TagService>();
 
 builder.Services.AddDbContext<AppDbContext>(
     options => options.UseSqlite(builder.Configuration.GetConnectionString("SqlConnection")));

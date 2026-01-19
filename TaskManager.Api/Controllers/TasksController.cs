@@ -26,14 +26,19 @@ namespace TaskManager.Api.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<TaskDto>> CreateTask([FromBody] CreateTaskDto taskDto)
         {
             var (result, task) = await _taskService.CreateTaskAsync(taskDto);
 
             return result switch
             {
-                CreateTaskResult.Success => CreatedAtAction(nameof(GetTaskByIdAsync), 
-                    new { id = task.Id }, task),
+                CreateTaskResult.Success => CreatedAtAction
+                (
+                    nameof(GetTaskByIdAsync), 
+                    new { id = task.Id },
+                    task
+                ),
                 CreateTaskResult.DuplicateTaskTitle => Conflict("A task with this title already exists"),
                 CreateTaskResult.ValidationFailed => BadRequest("Invalid task data"),
                 CreateTaskResult.DueDateInPast => BadRequest("Due date can not be in the past"),
@@ -129,5 +134,22 @@ namespace TaskManager.Api.Controllers
             };
         }
 
+        [HttpPost("{taskId}/tags/{tagId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> AddTagToTask(int taskId, int tagId)
+        {
+            var result = await _taskService.AddTagToTaskAsync(taskId, tagId);
+            return result switch
+            {
+                AddTagToTaskResult.Success => Ok(),
+                AddTagToTaskResult.TaskNotFound => NotFound("Task not found"),
+                AddTagToTaskResult.TagNotFound => NotFound("Tag not found"),
+                AddTagToTaskResult.TagAlreadyAdded => BadRequest("Tag already added to task"),
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
+            };
+        }
     }
 }

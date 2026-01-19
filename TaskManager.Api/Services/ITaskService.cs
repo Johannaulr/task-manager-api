@@ -11,6 +11,7 @@ namespace TaskManager.Api.Services
     public interface ITaskService
     {
         Task<(CreateTaskResult Result, TaskDto? Created)> CreateTaskAsync(CreateTaskDto createTaskDto);
+        Task<AddTagToTaskResult> AddTagToTaskAsync(int taskId, int tagId);
         Task<TaskDto> GetTaskByIdAsync(int id);
         Task<PagedResult<TaskDto>> GetAllTasksAsync(int pageNumber, int pageSize);
         Task<UpdateTaskResult> UpdateTaskAsync(int id, UpdateTaskDto taskDto);

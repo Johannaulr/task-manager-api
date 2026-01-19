@@ -7,7 +7,7 @@ using TaskManager.Api.Models;
 
 namespace TaskManager.Api.DTOs
 {
-    public class UpdateTaskDto
+    public record class UpdateTaskDto
     {
         [Required]
         [MaxLength(200)]
