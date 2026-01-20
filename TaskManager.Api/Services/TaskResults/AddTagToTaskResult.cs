@@ -5,6 +5,5 @@ public enum AddTagToTaskResult
     Success,
     TaskNotFound,
     TagNotFound,
-    TagAlreadyAdded,
-    ValidationFailed,
+    TagAlreadyAdded
 }

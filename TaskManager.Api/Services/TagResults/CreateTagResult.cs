@@ -3,6 +3,6 @@ namespace TaskManager.Api.Services.TagResults;
 public enum CreateTagResult
 {
     Success,
-    ValidationFailed,
-    DuplicateName
+    ValidationFailed, // Tag data is invalid
+    DuplicateName // Tag name already exists
 }
