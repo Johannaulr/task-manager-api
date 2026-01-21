@@ -3,6 +3,7 @@ using TaskManager.Api.DTOs;
 using TaskManager.Api.Models;
 using TaskManager.Api.Services.TaskResults;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace TaskManager.Api.Services
 {
@@ -83,16 +84,29 @@ namespace TaskManager.Api.Services
             return task == null ? null : MapToDto(task);
         }
 
-        public async Task<PagedResult<TaskDto>> GetAllTasksAsync(int pageNumber, int pageSize)
+        public async Task<PagedResult<TaskDto>> GetAllTasksAsync(TaskQueryDto queryDto)
         {
+            IQueryable<TaskItem> query = _context.TaskItems.AsNoTracking();
 
-            var query = _context.TaskItems.AsNoTracking();
+            //Tag filtering
+
+            if (queryDto.Tags != null && queryDto.Tags.Any())
+            {
+                var tagIds = queryDto.Tags;
+
+                query = queryDto.Mode == TagFilterMode.All
+                    ? query.Where(t => t.TaskTags.Count(tt => tagIds.Contains(tt.Tag.Id)) == tagIds.Count)
+                    : query.Where(t => t.TaskTags.Any(tt => tagIds.Contains(tt.Tag.Id)));
+            };
+
             var totalCount = await query.CountAsync();
+
+            // Pagination
 
             var tasks = await query
                 .OrderBy(t => t.Id)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+                .Skip((queryDto.Page - 1) * queryDto.PageSize)
+                .Take(queryDto.PageSize)
                 .Select(t => new TaskDto
                 {
                     Id = t.Id,
@@ -113,8 +127,8 @@ namespace TaskManager.Api.Services
             {
                 Tasks = tasks,
                 TotalCount = totalCount,
-                PageNumber = pageNumber,
-                PageSize = pageSize
+                PageNumber = queryDto.Page,
+                PageSize = queryDto.PageSize
             };
         }
 
