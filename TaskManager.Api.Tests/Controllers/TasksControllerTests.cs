@@ -22,6 +22,8 @@ public class TasksControllerTests
         _controller = new TasksController(_serviceMock.Object);
     }
 
+    // GetAllTasks Pagination Tests
+
     [Theory]
     [InlineData(0, 10, 0, typeof(BadRequestObjectResult))]
     [InlineData(1, 0, 0, typeof(BadRequestObjectResult))]
@@ -32,10 +34,16 @@ public class TasksControllerTests
     [InlineData(1, 10, 1, typeof(OkObjectResult))]
     public async Task GetAllTasks_ReturnsExpectedResultType(int pageNumber, int pageSize, int totalCount, Type expectedType)
     {
-        _serviceMock.Setup(s => s.GetAllTasksAsync(pageNumber, pageSize))
+        _serviceMock.Setup(s => s.GetAllTasksAsync(It.Is<TaskQueryDto>(q => q.Page == pageNumber && q.PageSize == pageSize)))
                     .ReturnsAsync(new PagedResult<TaskDto> { Tasks = new List<TaskDto>(), TotalCount = totalCount });
+        
+        var queryDto = new TaskQueryDto
+        {
+            Page = pageNumber,
+            PageSize = pageSize
+        };
 
-        var result = await _controller.GetAllTasks(pageNumber, pageSize);
+        var result = await _controller.GetAllTasks(queryDto);
 
         Assert.IsType(expectedType, result.Result);
     }
@@ -45,10 +53,16 @@ public class TasksControllerTests
     public async Task GetAllTasks_ServiceThrowsException_ShouldReturnInternalServerError()
     {
         _serviceMock
-            .Setup(s => s.GetAllTasksAsync(1, 10))
+            .Setup(s => s.GetAllTasksAsync(It.IsAny<TaskQueryDto>()))
             .ThrowsAsync(new Exception("Database error"));
 
-        var result = await _controller.GetAllTasks(1, 10);
+        var queryDto = new TaskQueryDto
+        {
+            Page = 1,
+            PageSize = 10
+        };
+
+        var result = await _controller.GetAllTasks(queryDto);
 
         var internalError = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(StatusCodes.Status500InternalServerError, internalError.StatusCode);

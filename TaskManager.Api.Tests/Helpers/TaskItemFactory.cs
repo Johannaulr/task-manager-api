@@ -10,7 +10,8 @@ public class TaskItemFactory
         string title = "Default Task",
         DateTime? dueDate = null,
         int priority = 0,
-        int progress = 0
+        int progress = 0,
+        ICollection<TaskTag>? tags = null
     )
     {
         return new TaskItem
@@ -18,7 +19,8 @@ public class TaskItemFactory
             Title = title,
             DueDate = dueDate ?? DateTime.UtcNow.AddDays(7),
             Priority = priority,
-            Progress = progress
+            Progress = progress,
+            TaskTags = tags ?? new List<TaskTag>()
         };
     }
 }
