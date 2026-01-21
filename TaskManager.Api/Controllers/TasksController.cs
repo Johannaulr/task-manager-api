@@ -72,7 +72,7 @@ namespace TaskManager.Api.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<TaskItem>))]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<PagedResult<TaskItem>>> GetAllTasks(int pageNumber = 1, int pageSize = 10)
+        public async Task<ActionResult<PagedResult<TaskDto>>> GetAllTasks(int pageNumber = 1, int pageSize = 10)
         {
             try
             {
